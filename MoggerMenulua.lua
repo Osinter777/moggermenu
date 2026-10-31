@@ -2,6 +2,142 @@
 --               MOGGER MENU v4.5 • ULTIMATE EDITION                  --
 --           Developers: @darkrelay & @Alexander_Hartuk               --
 --====================================================================--
+--[[
+    Mogger Menu v4.5 • PUSL-V4 Integration
+--]]
+
+local PUSL = loadstring(game:HttpGet("https://secure.pandauth.com/pv4/lib"))()
+if not PUSL or type(PUSL.configure) ~= "function" then
+    return warn("[Panda] Library failed to initialize.")
+end
+
+PUSL.configure({
+    serviceId = "mogger", -- Ваш Service ID
+})
+
+local KEY_FILE = "MoggerMenu_SavedKey.txt"
+local KeyVerified = false
+
+-- Проверка сохраненного локально ключа
+if isfile and readfile and isfile(KEY_FILE) then
+    local savedKey = readfile(KEY_FILE)
+    local res = PUSL.validate(savedKey)
+    if res and res.success then
+        KeyVerified = true
+    end
+end
+
+-- Если ключ не подтвержден — показываем легкое и стильное UI-окно авторизации
+if not KeyVerified then
+    local Players = game:GetService("Players")
+    local LP = Players.LocalPlayer
+
+    local KeyGui = Instance.new("ScreenGui")
+    KeyGui.Name = "MoggerKeyAuth"
+    KeyGui.ResetOnSpawn = false
+    local okHui, hui = pcall(function() return (gethui and gethui()) or game:GetService("CoreGui") end)
+    KeyGui.Parent = (okHui and hui) or LP:WaitForChild("PlayerGui")
+
+    local KeyFrame = Instance.new("Frame", KeyGui)
+    KeyFrame.Size = UDim2.new(0, 350, 0, 200)
+    KeyFrame.Position = UDim2.new(0.5, -175, 0.5, -100)
+    KeyFrame.BackgroundColor3 = Color3.fromRGB(14, 14, 20)
+    KeyFrame.BorderSizePixel = 0
+    KeyFrame.Active = true
+    Instance.new("UICorner", KeyFrame).CornerRadius = UDim.new(0, 12)
+
+    local KeyStroke = Instance.new("UIStroke", KeyFrame)
+    KeyStroke.Color = Color3.fromRGB(125, 90, 255)
+    KeyStroke.Thickness = 1.6
+
+    local Title = Instance.new("TextLabel", KeyFrame)
+    Title.Size = UDim2.new(1, -20, 0, 32)
+    Title.Position = UDim2.new(0, 10, 0, 8)
+    Title.BackgroundTransparency = 1
+    Title.Text = "MOGGER MENU • PANDAUTH"
+    Title.TextColor3 = Color3.fromRGB(245, 245, 250)
+    Title.Font = Enum.Font.GothamBlack
+    Title.TextSize = 13
+
+    local KeyInput = Instance.new("TextBox", KeyFrame)
+    KeyInput.Size = UDim2.new(1, -28, 0, 36)
+    KeyInput.Position = UDim2.new(0, 14, 0, 62)
+    KeyInput.BackgroundColor3 = Color3.fromRGB(24, 24, 34)
+    KeyInput.PlaceholderText = "Вставьте ваш ключ сюда..."
+    KeyInput.PlaceholderColor3 = Color3.fromRGB(110, 110, 130)
+    KeyInput.Text = ""
+    KeyInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+    KeyInput.Font = Enum.Font.GothamBold
+    KeyInput.TextSize = 11
+    KeyInput.ClearTextOnFocus = false
+    Instance.new("UICorner", KeyInput).CornerRadius = UDim.new(0, 8)
+
+    local GetKeyBtn = Instance.new("TextButton", KeyFrame)
+    GetKeyBtn.Size = UDim2.new(0.48, -10, 0, 36)
+    GetKeyBtn.Position = UDim2.new(0, 14, 0, 110)
+    GetKeyBtn.BackgroundColor3 = Color3.fromRGB(32, 32, 46)
+    GetKeyBtn.Text = "🔗 Get Key"
+    GetKeyBtn.TextColor3 = Color3.fromRGB(240, 240, 245)
+    GetKeyBtn.Font = Enum.Font.GothamBold
+    GetKeyBtn.TextSize = 11
+    Instance.new("UICorner", GetKeyBtn).CornerRadius = UDim.new(0, 8)
+
+    local CheckKeyBtn = Instance.new("TextButton", KeyFrame)
+    CheckKeyBtn.Size = UDim2.new(0.48, -10, 0, 36)
+    CheckKeyBtn.Position = UDim2.new(0.52, -4, 0, 110)
+    CheckKeyBtn.BackgroundColor3 = Color3.fromRGB(125, 90, 255)
+    CheckKeyBtn.Text = "✅ Check Key"
+    CheckKeyBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    CheckKeyBtn.Font = Enum.Font.GothamBold
+    CheckKeyBtn.TextSize= 11
+    Instance.new("UICorner", CheckKeyBtn).CornerRadius = UDim.new(0, 8)
+
+    local StatusLbl = Instance.new("TextLabel", KeyFrame)
+    StatusLbl.Size = UDim2.new(1, -20, 0, 20)
+    StatusLbl.Position = UDim2.new(0, 10, 1, -28)
+    StatusLbl.BackgroundTransparency = 1
+    StatusLbl.Text = "Panda Auth V4 • Система защиты"
+    StatusLbl.TextColor3 = Color3.fromRGB(125, 125, 145)
+    StatusLbl.Font = Enum.Font.GothamBold
+    StatusLbl.TextSize = 10
+
+    GetKeyBtn.MouseButton1Click:Connect(function()
+        local link = PUSL.getKeyUrl()
+        if setclipboard then
+            setclipboard(link)
+            StatusLbl.Text = "✅ Ссылка скопирована в буфер!"
+            StatusLbl.TextColor3 = Color3.fromRGB(60, 225, 150)
+        else
+            KeyInput.Text = link
+            StatusLbl.Text = "Скопируйте ссылку из поля ввода!"
+        end
+    end)
+
+    CheckKeyBtn.MouseButton1Click:Connect(function()
+        StatusLbl.Text = "⏳ Проверка ключа..."
+        StatusLbl.TextColor3 = Color3.fromRGB(240, 200, 80)
+        task.spawn(function()
+            local res = PUSL.validate(KeyInput.Text)
+            if res and res.success then
+                if writefile then
+                    pcall(function() writefile(KEY_FILE, string.gsub(KeyInput.Text, "%s+", "")) end)
+                end
+                StatusLbl.Text = "✅ Успешно! Загрузка..."
+                StatusLbl.TextColor3 = Color3.fromRGB(60, 225, 150)
+                task.wait(0.4)
+                KeyGui:Destroy()
+                KeyVerified = true
+            else
+                StatusLbl.Text = "❌ Неверный ключ или HWID!"
+                StatusLbl.TextColor3 = Color3.fromRGB(255, 75, 95)
+            end
+        end)
+    end)
+
+    repeat task.wait(0.2) until KeyVerified
+end
+
+print("[Panda] Авторизация успешна! Запуск Mogger Menu...")
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
